@@ -23,6 +23,7 @@ import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
+import { ARContainerThreeJS } from '../components/ARContainerThreeJS/ARContainerThreeJS';
 
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
@@ -455,6 +456,29 @@ export function ConsolePage() {
       }
     );
 
+    client.addTool(
+      {
+        name: 'change_model',
+        description: 'change the model of the glasses',
+        parameters: {
+          type: 'object',
+          properties: {
+            color: {
+              colorName: 'string',
+              colorCode: 'HEX code',
+            },
+          },
+          required: ['color'],
+        },
+      },
+      async ({ color }: { [key: string]: any }) => {
+        console.log({ color });
+        let event = new Event('color-change');
+        localStorage.setItem('glasses-color', color);
+        window.dispatchEvent(event);
+      }
+    );
+
     // handle realtime events from client + server for event logging
     client.on('realtime.event', (realtimeEvent: RealtimeEvent) => {
       setRealtimeEvents((realtimeEvents) => {
@@ -710,6 +734,7 @@ export function ConsolePage() {
               )}
             </div>
             <div className="content-block-body full">
+              <ARContainerThreeJS />
               {coords && (
                 <Map
                   center={[coords.lat, coords.lng]}

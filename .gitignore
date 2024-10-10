@@ -11,6 +11,13 @@
 # production
 /build
 
+# certificates
+/.cert
+
+# env variables
+.env
+
+
 # packaging
 *.zip
 *.tar.gz

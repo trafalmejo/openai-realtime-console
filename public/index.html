@@ -5,6 +5,26 @@
     <link rel="icon" href="%PUBLIC_URL%/openai-logomark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>realtime console</title>
+
+    <!-- Use "8thwall:" meta tags to hook into 8th Wall's build process and developer tools. -->
+    <meta name="8thwall:renderer" content="aframe:1.1.0" />
+    <meta name="8thwall:package" content="@8thwall.xrextras" />
+    <meta name="8thwall:package" content="@8thwall.landing-page" />
+    <meta name="8thwall:package" content="@react.react" />
+    <meta name="8thwall:package" content="@react.react-dom" />
+    <meta name="8thwall:package" content="@react.react-router-dom" />
+
+    <!-- Other external scripts and meta tags can also be added. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <script src="//cdn.8thwall.com/web/xrextras/xrextras.js" async></script>
+    <script
+      async
+      src="//apps.8thwall.com/xrweb?appKey=gPc9VYYl9y9tHOO5sa8CNF0o3nalpKUvnJUReqFkHBOeMNJw54TTdFiDjoNLADOZiH8hhr"
+    ></script>
+
     <!-- Fonts -->
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap"
