@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { MeshStandardMaterial, Object3D, Vector3 } from 'three';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
@@ -10,31 +10,34 @@ const cubeThreejsPipelineModule = () => {
   const purple = 0xad50ff;
   let cube: any;
   let glasses: any;
+  let headObj: any;
+  let head = new Object3D();
+  let glassesAttachment = new Object3D();
   const currentPosition = new Vector3();
 
   // Update the corresponding face mesh based on the faceId.
   const show = (event: any) => {
     const { transform, attachmentPoints } = event.detail;
 
+    glassesAttachment.scale.set(1.1, 1.1, 1.2);
     // Update the overall head position.
-    cube.position.lerp(transform.position, 0.5);
-    cube.setRotationFromQuaternion(transform.rotation);
-    cube.scale.set(transform.scale, transform.scale, transform.scale);
-
-    currentPosition.copy(cube.position);
+    // cube.position.lerp(transform.position, 0.5);
+    // cube.setRotationFromQuaternion(transform.rotation);
+    // cube.scale.set(
+    //   transform.scale / 3,
+    //   transform.scale / 3,
+    //   transform.scale / 3
+    // );
     cube.visible = false;
-    // console.log({ transform });
-    let newPos = transform.position;
-    newPos.z = newPos.z + 0.2;
-    newPos.y = newPos.y - 0.001;
 
-    //mouthAttachment.position.lerp(attachmentPoints.mouth.position, 0.5);
+    // Update the overall head position.
+    head.position.lerp(transform.position, 0.5);
+    head.setRotationFromQuaternion(transform.rotation);
+    head.scale.set(transform.scale, transform.scale, transform.scale);
 
-    glasses.position.lerp(newPos, 0.5);
-    glasses.setRotationFromQuaternion(transform.rotation);
-    glasses.scale.set(transform.scale, transform.scale, transform.scale);
+    currentPosition.copy(head.position);
 
-    glasses.visible = true;
+    glassesAttachment.position.lerp(attachmentPoints.noseBridge.position, 0.5);
   };
   const hide = () => (cube.visible = false);
 
@@ -43,38 +46,43 @@ const cubeThreejsPipelineModule = () => {
     // Enable shadows in the rednerer.
     renderer.shadowMap.enabled = true;
 
-    //loads .glb
-
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath(`/draco/`);
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
     loader.load(
-      '/assets/glasses-5.glb',
+      '/assets/glasses-6.glb',
       (gltf: GLTF) => {
         glasses = gltf.scene;
         glasses.visible = true;
         scene.add(glasses);
+        head.visible = true;
+        scene.add(head);
+        head.add(glassesAttachment);
+        glassesAttachment.add(glasses);
       }
       //resolve(gltf)
     );
-
-    // const loader = new GLTFLoader();
-    // loader.load(
-    //   '/assets/meta_orion_ar_glasses.glb',
-    //   function (gltf) {
-    //     glasses = gltf.scene;
-    //     glasses.visible = true;
-    //     scene.add(glasses);
-    //     //renderer.render(scene, camera);
-    //     //glasses.castShadow = true;
-    //     console.log({ glasses });
-    //   },
-    //   undefined,
-    //   function (error) {
-    //     console.error(error);
-    //   }
-    // );
+    loader.load(
+      '/assets/head_collider.glb',
+      (gltf: GLTF) => {
+        headObj = gltf.scene;
+        headObj.visible = true;
+        scene.add(headObj);
+        headObj.position.set(0, -0.031, -0.123);
+        headObj.traverse((node: any) => {
+          if (node.isMesh) {
+            const mat = new MeshStandardMaterial();
+            mat.colorWrite = false;
+            node.renderOrder = -1;
+            node.material = mat;
+          }
+        });
+        headObj.rotation;
+        head.add(headObj);
+      }
+      //resolve(gltf)
+    );
 
     // Add some light to the scene.
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);

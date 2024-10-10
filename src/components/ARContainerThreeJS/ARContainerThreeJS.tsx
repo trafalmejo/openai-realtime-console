@@ -37,7 +37,12 @@ const onxrloaded = () => {
     'beforeend',
     '<canvas id="camerafeed"></canvas>'
   );
-  XR8.run({ canvas: document.getElementById('camerafeed'), verbose: true });
+  XR8.run({
+    canvas: document.getElementById('camerafeed'),
+    verbose: true,
+    allowedDevices: XR8.XrConfig.device().ANY,
+    cameraConfig: { direction: XR8.XrConfig.camera().FRONT },
+  });
 
   // Cleanup
   return () => {
