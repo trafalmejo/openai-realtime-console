@@ -28,7 +28,7 @@ It should be available via `localhost:3000`.
 
 # Description
 
-<img src="/readme/screenshot.png" width="800" />
+<img src="/readme/screenshot.png" width="250" />
 
 This project uses the openAI realtime API to create a RAG (retrieval-augmented generation). A LLM (Large language Model) with specific context and specific functions. In this case we created a fictional character; a pair of smart glasses called Orion (Meta smart glasses) that are aware of their features, weight, colors, history, future, and AR in general.
 
