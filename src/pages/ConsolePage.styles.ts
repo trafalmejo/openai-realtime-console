@@ -8,11 +8,24 @@ export const Container = styled.div`
   font-optical-sizing: auto;
   font-weight: 100;
   font-style: normal;
+  transform: scale(1);
+
   button {
     transition: transform 0.2s;
   }
+  button.pushed {
+    transform: scale(1.4);
+    svg {
+      path {
+        stroke: #22aa3f;
+      }
+    }
+  }
+  button.unpushed {
+    transform: scale(1);
+  }
   button:hover {
-    transform: scale(1.05);
+    transform: scale(1.1);
     transform-origin: center center;
     svg {
       path {
@@ -78,28 +91,43 @@ export const BubbleContainer = styled.div`
 export const TextBubble = styled.div`
   border-radius: 1rem;
   padding: 1rem;
+  padding-top: 2rem;
   width: 15rem;
   height: auto;
   font-weight: 400;
+  position: relative;
   @media only screen and (min-width: 768px) {
     width: 20rem;
   }
-
   &.bubble-user {
     background-color: #5cff85;
     transform: translate(2rem, 0);
     color: #172046;
+    text-align: right;
     @media only screen and (min-width: 768px) {
       transform: translate(5rem, 0);
     }
   }
   &.bubble-assistant {
+    text-align: left;
     background-color: #172046;
     transform: translate(-2rem, 0);
     @media only screen and (min-width: 768px) {
       transform: translate(-5rem, 0);
     }
     color: white;
+  }
+`;
+export const CloseBubble = styled.div`
+  width: 1rem;
+  padding: 0.5rem;
+  position: absolute;
+  top: 0px;
+  &.close-assistant {
+    left: 0.5rem;
+  }
+  &.close-user {
+    right: 0.5px;
   }
 `;
 export const ControlContainer = styled.div`

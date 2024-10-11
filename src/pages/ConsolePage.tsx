@@ -30,6 +30,7 @@ import { ReactComponent as HomeSVG } from '../assets/home.svg';
 import { ReactComponent as HomeBackSVG } from '../assets/homeback.svg';
 import { ReactComponent as MicSVG } from '../assets/mic.svg';
 import { ReactComponent as CameraSVG } from '../assets/photo.svg';
+import { ReactComponent as CloseSVG } from '../assets/close.svg';
 import { isJsxOpeningLikeElement } from 'typescript';
 
 /**
@@ -62,7 +63,6 @@ interface RealtimeEvent {
 export function ConsolePage() {
   const autoConnect = true;
   const [isHome, setIsHome] = useState(true);
-
   useEffect(() => {
     if (autoConnect) {
       if (isHome) {
@@ -519,62 +519,57 @@ export function ConsolePage() {
             <ARContainerThreeJS />
             <Styled.BubbleContainer>
               {lastItems.map((conversationItem, conversaionId) => {
-                return (
-                  <Styled.TextBubble
-                    key={conversaionId}
-                    className={
-                      conversationItem.role == 'user'
-                        ? 'bubble-user'
-                        : 'bubble-assistant'
-                    }
-                  >
-                    {conversationItem &&
-                      !conversationItem.formatted.tool &&
-                      conversationItem.role === 'user' && (
-                        <div>
-                          {conversationItem.formatted.transcript ||
-                            (conversationItem.formatted.audio?.length
-                              ? '(awaiting transcript)'
-                              : conversationItem.formatted.text ||
-                                '(item sent)')}
-                        </div>
-                      )}
-                    {conversationItem &&
-                      !conversationItem.formatted.tool &&
-                      conversationItem.role === 'assistant' && (
-                        <div>
-                          {conversationItem.formatted.transcript ||
-                            conversationItem.formatted.text ||
-                            '(truncated)'}
-                        </div>
-                      )}
-                  </Styled.TextBubble>
-                );
+                if (conversationItem.role) {
+                  return (
+                    <Styled.TextBubble
+                      key={conversaionId}
+                      className={
+                        conversationItem.role == 'user'
+                          ? 'bubble-user'
+                          : 'bubble-assistant'
+                      }
+                    >
+                      <Styled.CloseBubble
+                        className={
+                          conversationItem.role == 'user'
+                            ? 'close-user'
+                            : 'close-assistant'
+                        }
+                        onClick={() => {
+                          setLastItems((list) => {
+                            let newList = list.filter((itemList, itemId) => {
+                              return itemId != conversaionId;
+                            });
+                            return newList;
+                          });
+                        }}
+                      >
+                        <CloseSVG />
+                      </Styled.CloseBubble>
+                      {conversationItem &&
+                        !conversationItem.formatted.tool &&
+                        conversationItem.role === 'user' && (
+                          <div>
+                            {conversationItem.formatted.transcript ||
+                              (conversationItem.formatted.audio?.length
+                                ? '(awaiting transcript)'
+                                : conversationItem.formatted.text ||
+                                  '(item sent)')}
+                          </div>
+                        )}
+                      {conversationItem &&
+                        !conversationItem.formatted.tool &&
+                        conversationItem.role === 'assistant' && (
+                          <div>
+                            {conversationItem.formatted.transcript ||
+                              conversationItem.formatted.text ||
+                              '(truncated)'}
+                          </div>
+                        )}
+                    </Styled.TextBubble>
+                  );
+                }
               })}
-              {/* <Styled.TextBubble className="bubble-user">
-                {items[items.length - 1] &&
-                  !items[items.length - 1].formatted.tool &&
-                  items[items.length - 1].role === 'user' && (
-                    <div>
-                      {items[items.length i- 1].formatted.transcript ||
-                        (items[items.length - 1].formatted.audio?.length
-                          ? '(awaiting transcript)'
-                          : items[items.length - 1].formatted.text ||
-                            '(item sent)')}
-                    </div>
-                  )}
-              </Styled.TextBubble>
-              <Styled.TextBubble className="bubble-assistant">
-                {items[items.length - 1] &&
-                  !items[items.length - 1].formatted.tool &&
-                  items[items.length - 1].role === 'assistant' && (
-                    <div>
-                      {items[items.length - 1].formatted.transcript ||
-                        items[items.length - 1].formatted.text ||
-                        '(truncated)'}
-                    </div>
-                  )}
-              </Styled.TextBubble> */}
             </Styled.BubbleContainer>
             <Styled.ControlContainer>
               <Styled.HomeBackButton
@@ -586,6 +581,7 @@ export function ConsolePage() {
                 <HomeBackSVG />
               </Styled.HomeBackButton>
               <Styled.MicButton
+                className={isRecording ? 'pushed' : 'unpushed'}
                 disabled={!isConnected}
                 onTouchStart={startRecording}
                 onTouchEnd={stopRecording}
