@@ -6,7 +6,7 @@ declare let THREE: any;
 declare let XR8: any;
 
 // Define an 8th Wall XR Camera Pipeline Module that adds a cube to a threejs scene on startup.
-const cubeThreejsPipelineModule = () => {
+const arFilterPipelineModule = () => {
   const purple = 0xad50ff;
   let cube: any;
   let glasses: any;
@@ -19,7 +19,7 @@ const cubeThreejsPipelineModule = () => {
   const show = (event: any) => {
     const { transform, attachmentPoints } = event.detail;
 
-    glassesAttachment.scale.set(1.1, 1.1, 1.2);
+    glassesAttachment.scale.set(1.15, 1.1, 1.2);
     // Update the overall head position.
     // cube.position.lerp(transform.position, 0.5);
     // cube.setRotationFromQuaternion(transform.rotation);
@@ -51,7 +51,7 @@ const cubeThreejsPipelineModule = () => {
     const loader = new GLTFLoader();
     loader.setDRACOLoader(dracoLoader);
     loader.load(
-      '/assets/glasses-6.glb',
+      '/assets/glasses.glb',
       (gltf: GLTF) => {
         glasses = gltf.scene;
         glasses.visible = true;
@@ -121,7 +121,7 @@ const cubeThreejsPipelineModule = () => {
   return {
     // Camera pipeline modules need a name. It can be whatever you want but must be unique within
     // your app.
-    name: 'cubethreejs',
+    name: 'arfilter',
 
     // onStart is called once when the camera feed begins. In this case, we need to wait for the
     // XR8.Threejs scene to be ready before we can access it to add content. It was created in
@@ -167,4 +167,4 @@ const cubeThreejsPipelineModule = () => {
   };
 };
 
-export { cubeThreejsPipelineModule };
+export { arFilterPipelineModule };

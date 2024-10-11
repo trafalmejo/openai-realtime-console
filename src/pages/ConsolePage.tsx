@@ -22,10 +22,14 @@ import { WavRenderer } from '../utils/wav_renderer';
 import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
-import { Map } from '../components/Map';
 import { ARContainerThreeJS } from '../components/ARContainerThreeJS/ARContainerThreeJS';
+import * as Styled from './ConsolePage.styles';
 
 import './ConsolePage.scss';
+import { ReactComponent as HomeSVG } from '../assets/home.svg';
+import { ReactComponent as HomeBackSVG } from '../assets/homeback.svg';
+import { ReactComponent as MicSVG } from '../assets/mic.svg';
+import { ReactComponent as CameraSVG } from '../assets/photo.svg';
 import { isJsxOpeningLikeElement } from 'typescript';
 
 /**
@@ -56,6 +60,22 @@ interface RealtimeEvent {
 }
 
 export function ConsolePage() {
+  const autoConnect = true;
+  const [isHome, setIsHome] = useState(true);
+
+  useEffect(() => {
+    if (autoConnect) {
+      if (isHome) {
+        if (isConnected) disconnectConversation();
+      } else {
+        if (!isConnected) connectConversation();
+      }
+    }
+    return () => {
+      if (isConnected) disconnectConversation();
+    };
+  }, [isHome]);
+
   /**
    * Ask user for API Key
    * If we're using the local relay server, we don't need this
@@ -112,6 +132,7 @@ export function ConsolePage() {
    * - coords, marker are for get_weather() function
    */
   const [items, setItems] = useState<ItemType[]>([]);
+  const [lastItems, setLastItems] = useState<ItemType[]>([]);
   const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
   const [expandedEvents, setExpandedEvents] = useState<{
     [key: string]: boolean;
@@ -120,11 +141,6 @@ export function ConsolePage() {
   const [canPushToTalk, setCanPushToTalk] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
-  const [coords, setCoords] = useState<Coordinates | null>({
-    lat: 37.775593,
-    lng: -122.418137,
-  });
-  const [marker, setMarker] = useState<Coordinates | null>(null);
 
   /**
    * Utility for formatting the timing of logs
@@ -173,7 +189,7 @@ export function ConsolePage() {
     setIsConnected(true);
     setRealtimeEvents([]);
     setItems(client.conversation.getItems());
-
+    setLastItems(client.conversation.getItems().slice(-2));
     // Connect to microphone
     await wavRecorder.begin();
 
@@ -202,12 +218,8 @@ export function ConsolePage() {
     setIsConnected(false);
     setRealtimeEvents([]);
     setItems([]);
+    setLastItems([]);
     setMemoryKv({});
-    setCoords({
-      lat: 37.775593,
-      lng: -122.418137,
-    });
-    setMarker(null);
 
     const client = clientRef.current;
     client.disconnect();
@@ -412,49 +424,6 @@ export function ConsolePage() {
         return { ok: true };
       }
     );
-    client.addTool(
-      {
-        name: 'get_weather',
-        description:
-          'Retrieves the weather for a given lat, lng coordinate pair. Specify a label for the location.',
-        parameters: {
-          type: 'object',
-          properties: {
-            lat: {
-              type: 'number',
-              description: 'Latitude',
-            },
-            lng: {
-              type: 'number',
-              description: 'Longitude',
-            },
-            location: {
-              type: 'string',
-              description: 'Name of the location',
-            },
-          },
-          required: ['lat', 'lng', 'location'],
-        },
-      },
-      async ({ lat, lng, location }: { [key: string]: any }) => {
-        setMarker({ lat, lng, location });
-        setCoords({ lat, lng, location });
-        const result = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`
-        );
-        const json = await result.json();
-        const temperature = {
-          value: json.current.temperature_2m as number,
-          units: json.current_units.temperature_2m as string,
-        };
-        const wind_speed = {
-          value: json.current.wind_speed_10m as number,
-          units: json.current_units.wind_speed_10m as string,
-        };
-        setMarker({ lat, lng, location, temperature, wind_speed });
-        return json;
-      }
-    );
 
     client.addTool(
       {
@@ -514,9 +483,11 @@ export function ConsolePage() {
         item.formatted.file = wavFile;
       }
       setItems(items);
+      setLastItems(items.slice(-2));
     });
 
     setItems(client.conversation.getItems());
+    setLastItems(client.conversation.getItems().slice(-2));
 
     return () => {
       // cleanup; resets to defaults
@@ -528,229 +499,319 @@ export function ConsolePage() {
    * Render the application
    */
   return (
-    <div data-component="ConsolePage">
-      <div className="content-top">
-        <div className="content-title">
-          <img src="/openai-logomark.svg" />
-          <span>realtime console</span>
-        </div>
-        <div className="content-api-key">
-          {!LOCAL_RELAY_SERVER_URL && (
-            <Button
-              icon={Edit}
-              iconPosition="end"
-              buttonStyle="flush"
-              label={`api key: ${apiKey.slice(0, 3)}...`}
-              onClick={() => resetAPIKey()}
-            />
-          )}
-        </div>
-      </div>
-      <div className="content-main">
-        <div className="content-logs">
-          <div className="content-block events">
-            <div className="visualization">
-              <div className="visualization-entry client">
-                <canvas ref={clientCanvasRef} />
-              </div>
-              <div className="visualization-entry server">
-                <canvas ref={serverCanvasRef} />
-              </div>
-            </div>
-            <div className="content-block-title">events</div>
-            <div className="content-block-body" ref={eventsScrollRef}>
-              {!realtimeEvents.length && `awaiting connection...`}
-              {realtimeEvents.map((realtimeEvent, i) => {
-                const count = realtimeEvent.count;
-                const event = { ...realtimeEvent.event };
-                if (event.type === 'input_audio_buffer.append') {
-                  event.audio = `[trimmed: ${event.audio.length} bytes]`;
-                } else if (event.type === 'response.audio.delta') {
-                  event.delta = `[trimmed: ${event.delta.length} bytes]`;
-                }
+    <Styled.Container>
+      {isHome ? (
+        <Styled.HomeContainer>
+          <Styled.Title>MEET ORION</Styled.Title>
+          <Styled.Text>Our New Smart Glasses</Styled.Text>
+          <Styled.HomeButton
+            onClick={() => {
+              setIsHome(false);
+            }}
+          >
+            <HomeSVG />
+          </Styled.HomeButton>
+          <Styled.Logo />
+        </Styled.HomeContainer>
+      ) : (
+        <>
+          <Styled.FilterContainer>
+            <ARContainerThreeJS />
+            <Styled.BubbleContainer>
+              {lastItems.map((conversationItem, conversaionId) => {
                 return (
-                  <div className="event" key={event.event_id}>
-                    <div className="event-timestamp">
-                      {formatTime(realtimeEvent.time)}
-                    </div>
-                    <div className="event-details">
-                      <div
-                        className="event-summary"
-                        onClick={() => {
-                          // toggle event details
-                          const id = event.event_id;
-                          const expanded = { ...expandedEvents };
-                          if (expanded[id]) {
-                            delete expanded[id];
-                          } else {
-                            expanded[id] = true;
-                          }
-                          setExpandedEvents(expanded);
-                        }}
-                      >
-                        <div
-                          className={`event-source ${
-                            event.type === 'error'
-                              ? 'error'
-                              : realtimeEvent.source
-                          }`}
-                        >
-                          {realtimeEvent.source === 'client' ? (
-                            <ArrowUp />
-                          ) : (
-                            <ArrowDown />
-                          )}
-                          <span>
-                            {event.type === 'error'
-                              ? 'error!'
-                              : realtimeEvent.source}
-                          </span>
-                        </div>
-                        <div className="event-type">
-                          {event.type}
-                          {count && ` (${count})`}
-                        </div>
-                      </div>
-                      {!!expandedEvents[event.event_id] && (
-                        <div className="event-payload">
-                          {JSON.stringify(event, null, 2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="content-block conversation">
-            <div className="content-block-title">conversation</div>
-            <div className="content-block-body" data-conversation-content>
-              {!items.length && `awaiting connection...`}
-              {items.map((conversationItem, i) => {
-                return (
-                  <div className="conversation-item" key={conversationItem.id}>
-                    <div className={`speaker ${conversationItem.role || ''}`}>
-                      <div>
-                        {(
-                          conversationItem.role || conversationItem.type
-                        ).replaceAll('_', ' ')}
-                      </div>
-                      <div
-                        className="close"
-                        onClick={() =>
-                          deleteConversationItem(conversationItem.id)
-                        }
-                      >
-                        <X />
-                      </div>
-                    </div>
-                    <div className={`speaker-content`}>
-                      {/* tool response */}
-                      {conversationItem.type === 'function_call_output' && (
-                        <div>{conversationItem.formatted.output}</div>
-                      )}
-                      {/* tool call */}
-                      {!!conversationItem.formatted.tool && (
+                  <Styled.TextBubble
+                    key={conversaionId}
+                    className={
+                      conversationItem.role == 'user'
+                        ? 'bubble-user'
+                        : 'bubble-assistant'
+                    }
+                  >
+                    {conversationItem &&
+                      !conversationItem.formatted.tool &&
+                      conversationItem.role === 'user' && (
                         <div>
-                          {conversationItem.formatted.tool.name}(
-                          {conversationItem.formatted.tool.arguments})
+                          {conversationItem.formatted.transcript ||
+                            (conversationItem.formatted.audio?.length
+                              ? '(awaiting transcript)'
+                              : conversationItem.formatted.text ||
+                                '(item sent)')}
                         </div>
                       )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'user' && (
-                          <div>
-                            {conversationItem.formatted.transcript ||
-                              (conversationItem.formatted.audio?.length
-                                ? '(awaiting transcript)'
-                                : conversationItem.formatted.text ||
-                                  '(item sent)')}
-                          </div>
-                        )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'assistant' && (
-                          <div>
-                            {conversationItem.formatted.transcript ||
-                              conversationItem.formatted.text ||
-                              '(truncated)'}
-                          </div>
-                        )}
-                      {conversationItem.formatted.file && (
-                        <audio
-                          src={conversationItem.formatted.file.url}
-                          controls
-                        />
+                    {conversationItem &&
+                      !conversationItem.formatted.tool &&
+                      conversationItem.role === 'assistant' && (
+                        <div>
+                          {conversationItem.formatted.transcript ||
+                            conversationItem.formatted.text ||
+                            '(truncated)'}
+                        </div>
                       )}
-                    </div>
-                  </div>
+                  </Styled.TextBubble>
                 );
               })}
-            </div>
-          </div>
-          <div className="content-actions">
-            <Toggle
-              defaultValue={false}
-              labels={['manual', 'vad']}
-              values={['none', 'server_vad']}
-              onChange={(_, value) => changeTurnEndType(value)}
-            />
-            <div className="spacer" />
-            {isConnected && canPushToTalk && (
-              <Button
-                label={isRecording ? 'release to send' : 'push to talk'}
-                buttonStyle={isRecording ? 'alert' : 'regular'}
-                disabled={!isConnected || !canPushToTalk}
+              {/* <Styled.TextBubble className="bubble-user">
+                {items[items.length - 1] &&
+                  !items[items.length - 1].formatted.tool &&
+                  items[items.length - 1].role === 'user' && (
+                    <div>
+                      {items[items.length i- 1].formatted.transcript ||
+                        (items[items.length - 1].formatted.audio?.length
+                          ? '(awaiting transcript)'
+                          : items[items.length - 1].formatted.text ||
+                            '(item sent)')}
+                    </div>
+                  )}
+              </Styled.TextBubble>
+              <Styled.TextBubble className="bubble-assistant">
+                {items[items.length - 1] &&
+                  !items[items.length - 1].formatted.tool &&
+                  items[items.length - 1].role === 'assistant' && (
+                    <div>
+                      {items[items.length - 1].formatted.transcript ||
+                        items[items.length - 1].formatted.text ||
+                        '(truncated)'}
+                    </div>
+                  )}
+              </Styled.TextBubble> */}
+            </Styled.BubbleContainer>
+            <Styled.ControlContainer>
+              <Styled.HomeBackButton
+                onClick={() => {
+                  window.location.reload();
+                  //setIsHome(true);
+                }}
+              >
+                <HomeBackSVG />
+              </Styled.HomeBackButton>
+              <Styled.MicButton
+                disabled={!isConnected}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
-              />
-            )}
-            <div className="spacer" />
-            <Button
-              label={isConnected ? 'disconnect' : 'connect'}
-              iconPosition={isConnected ? 'end' : 'start'}
-              icon={isConnected ? X : Zap}
-              buttonStyle={isConnected ? 'regular' : 'action'}
-              onClick={
-                isConnected ? disconnectConversation : connectConversation
-              }
-            />
-          </div>
-        </div>
-        <div className="content-right">
-          <div className="content-block map">
-            <div className="content-block-title">get_weather()</div>
-            <div className="content-block-title bottom">
-              {marker?.location || 'not yet retrieved'}
-              {!!marker?.temperature && (
-                <>
-                  <br />
-                  🌡️ {marker.temperature.value} {marker.temperature.units}
-                </>
-              )}
-              {!!marker?.wind_speed && (
-                <>
-                  {' '}
-                  🍃 {marker.wind_speed.value} {marker.wind_speed.units}
-                </>
-              )}
+              >
+                <MicSVG />
+              </Styled.MicButton>
+              <Styled.CameraButton>
+                <CameraSVG />
+              </Styled.CameraButton>
+            </Styled.ControlContainer>
+          </Styled.FilterContainer>
+          <div className="content-debug" data-component="ConsolePage">
+            <div className="content-top">
+              <div className="content-title">
+                <img src="/openai-logomark.svg" />
+                <span>realtime console</span>
+              </div>
+              <div className="content-api-key">
+                {!LOCAL_RELAY_SERVER_URL && (
+                  <Button
+                    icon={Edit}
+                    iconPosition="end"
+                    buttonStyle="flush"
+                    label={`api key: ${apiKey.slice(0, 3)}...`}
+                    onClick={() => resetAPIKey()}
+                  />
+                )}
+              </div>
             </div>
-            <div className="content-block-body full">
-              <ARContainerThreeJS />
-              {coords && (
-                <Map
-                  center={[coords.lat, coords.lng]}
-                  location={coords.location}
-                />
-              )}
+            <div className="content-main">
+              <div className="content-logs">
+                <div className="content-block events">
+                  <div className="visualization">
+                    <div className="visualization-entry client">
+                      <canvas ref={clientCanvasRef} />
+                    </div>
+                    <div className="visualization-entry server">
+                      <canvas ref={serverCanvasRef} />
+                    </div>
+                  </div>
+                  <div className="content-block-title">events</div>
+                  <div className="content-block-body" ref={eventsScrollRef}>
+                    {!realtimeEvents.length && `awaiting connection...`}
+                    {realtimeEvents.map((realtimeEvent, i) => {
+                      const count = realtimeEvent.count;
+                      const event = { ...realtimeEvent.event };
+                      if (event.type === 'input_audio_buffer.append') {
+                        event.audio = `[trimmed: ${event.audio.length} bytes]`;
+                      } else if (event.type === 'response.audio.delta') {
+                        event.delta = `[trimmed: ${event.delta.length} bytes]`;
+                      }
+                      return (
+                        <div className="event" key={event.event_id}>
+                          <div className="event-timestamp">
+                            {formatTime(realtimeEvent.time)}
+                          </div>
+                          <div className="event-details">
+                            <div
+                              className="event-summary"
+                              onClick={() => {
+                                // toggle event details
+                                const id = event.event_id;
+                                const expanded = { ...expandedEvents };
+                                if (expanded[id]) {
+                                  delete expanded[id];
+                                } else {
+                                  expanded[id] = true;
+                                }
+                                setExpandedEvents(expanded);
+                              }}
+                            >
+                              <div
+                                className={`event-source ${
+                                  event.type === 'error'
+                                    ? 'error'
+                                    : realtimeEvent.source
+                                }`}
+                              >
+                                {realtimeEvent.source === 'client' ? (
+                                  <ArrowUp />
+                                ) : (
+                                  <ArrowDown />
+                                )}
+                                <span>
+                                  {event.type === 'error'
+                                    ? 'error!'
+                                    : realtimeEvent.source}
+                                </span>
+                              </div>
+                              <div className="event-type">
+                                {event.type}
+                                {count && ` (${count})`}
+                              </div>
+                            </div>
+                            {!!expandedEvents[event.event_id] && (
+                              <div className="event-payload">
+                                {JSON.stringify(event, null, 2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="content-block conversation">
+                  <div className="content-block-title">conversation</div>
+                  <div className="content-block-body" data-conversation-content>
+                    {!items.length && `awaiting connection...`}
+                    {items.map((conversationItem, i) => {
+                      return (
+                        <div
+                          className="conversation-item"
+                          key={conversationItem.id}
+                        >
+                          <div
+                            className={`speaker ${conversationItem.role || ''}`}
+                          >
+                            <div>
+                              {(
+                                conversationItem.role || conversationItem.type
+                              ).replaceAll('_', ' ')}
+                            </div>
+                            <div
+                              className="close"
+                              onClick={() =>
+                                deleteConversationItem(conversationItem.id)
+                              }
+                            >
+                              <X />
+                            </div>
+                          </div>
+                          <div className={`speaker-content`}>
+                            {/* tool response */}
+                            {conversationItem.type ===
+                              'function_call_output' && (
+                              <div>
+                                {conversationItem.formatted.output + '- output'}
+                              </div>
+                            )}
+                            {/* tool call */}
+                            {!!conversationItem.formatted.tool && (
+                              <div>
+                                {conversationItem.formatted.tool.name}(
+                                {conversationItem.formatted.tool.arguments})
+                              </div>
+                            )}
+                            {!conversationItem.formatted.tool &&
+                              conversationItem.role === 'user' && (
+                                <div>
+                                  {conversationItem.formatted.transcript +
+                                    '- user' ||
+                                    (conversationItem.formatted.audio?.length
+                                      ? '(awaiting transcript)'
+                                      : conversationItem.formatted.text +
+                                          '- user' || '(item sent)')}
+                                </div>
+                              )}
+                            {!conversationItem.formatted.tool &&
+                              conversationItem.role === 'assistant' && (
+                                <div>
+                                  {conversationItem.formatted.transcript +
+                                    '- transcript' ||
+                                    conversationItem.formatted.text +
+                                      '- text' ||
+                                    '(truncated)'}
+                                </div>
+                              )}
+                            {conversationItem.formatted.file && (
+                              <audio
+                                src={conversationItem.formatted.file.url}
+                                controls
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="content-actions">
+                  <Toggle
+                    defaultValue={false}
+                    labels={['manual', 'vad']}
+                    values={['none', 'server_vad']}
+                    onChange={(_, value) => changeTurnEndType(value)}
+                  />
+                  <div className="spacer" />
+                  {isConnected && canPushToTalk && (
+                    <Button
+                      label={isRecording ? 'release to send' : 'push to talk'}
+                      buttonStyle={isRecording ? 'alert' : 'regular'}
+                      disabled={!isConnected || !canPushToTalk}
+                      onMouseDown={startRecording}
+                      onMouseUp={stopRecording}
+                    />
+                  )}
+                  <div className="spacer" />
+                  <Button
+                    label={isConnected ? 'disconnect' : 'connect'}
+                    iconPosition={isConnected ? 'end' : 'start'}
+                    icon={isConnected ? X : Zap}
+                    buttonStyle={isConnected ? 'regular' : 'action'}
+                    onClick={
+                      isConnected ? disconnectConversation : connectConversation
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* <div className="content-right">
+              <div className="content-block-body full">
+              </div>
+              <div className="content-block kv">
+                <div className="content-block-title">set_memory()</div>
+                <div className="content-block-body content-kv">
+                  {JSON.stringify(memoryKv, null, 2)}
+                </div>
+              </div>
+            </div> */}
             </div>
           </div>
-          <div className="content-block kv">
-            <div className="content-block-title">set_memory()</div>
-            <div className="content-block-body content-kv">
-              {JSON.stringify(memoryKv, null, 2)}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </Styled.Container>
   );
 }

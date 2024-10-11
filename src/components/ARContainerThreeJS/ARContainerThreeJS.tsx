@@ -1,5 +1,5 @@
 import { Fragment, useEffect } from 'react';
-import { cubeThreejsPipelineModule } from './cube-threejs';
+import { arFilterPipelineModule } from './ARFilter';
 import * as THREE from 'three';
 
 declare let XR8: any;
@@ -30,7 +30,7 @@ const onxrloaded = () => {
     XRExtras.Loading.pipelineModule(), // Manages the loading screen on startup.
     XRExtras.RuntimeError.pipelineModule(), // Shows an error image on runtime error.
     // Custom pipeline modules.
-    cubeThreejsPipelineModule(),
+    arFilterPipelineModule(),
   ]);
 
   document.body.insertAdjacentHTML(
@@ -62,11 +62,7 @@ const ARContainerThreeJS = () => {
       : window.addEventListener('xrloaded', onxrloaded);
   }, []);
 
-  return (
-    <Fragment>
-      <button>Back button</button>
-    </Fragment>
-  );
+  return <Fragment></Fragment>;
 };
 
 export { ARContainerThreeJS };

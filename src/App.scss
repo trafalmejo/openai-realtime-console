@@ -3,3 +3,13 @@
   width: 100%;
   position: relative;
 }
+
+#camerafeed {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: -1;
+}
+.content-debug {
+  display: none;
+}
