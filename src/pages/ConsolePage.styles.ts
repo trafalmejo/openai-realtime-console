@@ -12,6 +12,7 @@ export const Container = styled.div`
 
   button {
     transition: transform 0.2s;
+    transform-origin: center center;
   }
   button.pushed {
     transform: scale(1.4);
@@ -24,12 +25,15 @@ export const Container = styled.div`
   button.unpushed {
     transform: scale(1);
   }
-  button:hover {
-    transform: scale(1.1);
-    transform-origin: center center;
+  button:active {
     svg {
       path {
         stroke: #5cff85;
+      }
+    }
+    @media only screen and (min-width: 768px) {
+      button:hover {
+        transform: scale(1.1);
       }
     }
   }
