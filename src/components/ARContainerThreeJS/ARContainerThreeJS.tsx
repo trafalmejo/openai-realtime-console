@@ -1,5 +1,7 @@
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { arFilterPipelineModule } from './ARFilter';
+import { ReactComponent as CloseSVG } from '../../assets/close.svg';
+import * as Styled from './ARContainer.styles';
 import * as THREE from 'three';
 
 declare let XR8: any;
@@ -26,6 +28,7 @@ const onxrloaded = () => {
     XR8.Threejs.pipelineModule(), // Creates a ThreeJS AR Scene.
     // XR8.XrController.pipelineModule(), // Enables SLAM tracking.
     XR8.FaceController.pipelineModule(), // Loads 8th Wall Face Engine
+    XR8.CanvasScreenshot.pipelineModule(),
     XRExtras.FullWindowCanvas.pipelineModule(), // Modifies the canvas to fill the window.
     XRExtras.Loading.pipelineModule(), // Manages the loading screen on startup.
     XRExtras.RuntimeError.pipelineModule(), // Shows an error image on runtime error.
@@ -55,14 +58,54 @@ const onxrloaded = () => {
   };
 };
 
-const ARContainerThreeJS = () => {
+const ARContainerThreeJS = ({
+  shareable,
+  isModalOpen,
+  setIsModalOpen,
+  setShareable,
+}: any) => {
   useEffect(() => {
     window['XR8']
       ? onxrloaded()
       : window.addEventListener('xrloaded', onxrloaded);
   }, []);
 
-  return <Fragment></Fragment>;
+  useEffect(() => {
+    if (shareable == 'capturing') {
+      takeScreenshot();
+    }
+  }, [shareable]);
+
+  const takeScreenshot = () => {
+    const picture = XR8.CanvasScreenshot.takeScreenshot();
+    picture.then(
+      (data: any) => {
+        setShareable('data:image/jpeg;base64,' + data);
+        setIsModalOpen(true);
+      },
+      (error: any) => {
+        console.log(error);
+        setShareable('error');
+        // Handle screenshot error.
+      }
+    );
+  };
+  return (
+    <Fragment>
+      {isModalOpen && (
+        <Styled.ShareableContainer>
+          <Styled.Shareable src={shareable} alt="" />
+          <Styled.CloseButton
+            onClick={() => {
+              setIsModalOpen(false);
+            }}
+          >
+            <CloseSVG />
+          </Styled.CloseButton>
+        </Styled.ShareableContainer>
+      )}
+    </Fragment>
+  );
 };
 
 export { ARContainerThreeJS };

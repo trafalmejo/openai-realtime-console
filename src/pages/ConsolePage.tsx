@@ -141,6 +141,8 @@ export function ConsolePage() {
   const [canPushToTalk, setCanPushToTalk] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
+  const [shareable, setShareable] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   /**
    * Utility for formatting the timing of logs
@@ -516,7 +518,12 @@ export function ConsolePage() {
       ) : (
         <>
           <Styled.FilterContainer>
-            <ARContainerThreeJS />
+            <ARContainerThreeJS
+              shareable={shareable}
+              isModalOpen={isModalOpen}
+              setIsModalOpen={setIsModalOpen}
+              setShareable={setShareable}
+            />
             <Styled.BubbleContainer>
               {lastItems.map((conversationItem, conversaionId) => {
                 if (conversationItem.role) {
@@ -571,29 +578,35 @@ export function ConsolePage() {
                 }
               })}
             </Styled.BubbleContainer>
-            <Styled.ControlContainer>
-              <Styled.HomeBackButton
-                onClick={() => {
-                  window.location.reload();
-                  //setIsHome(true);
-                }}
-              >
-                <HomeBackSVG />
-              </Styled.HomeBackButton>
-              <Styled.MicButton
-                className={isRecording ? 'pushed' : 'unpushed'}
-                disabled={!isConnected}
-                onTouchStart={startRecording}
-                onTouchEnd={stopRecording}
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              >
-                <MicSVG />
-              </Styled.MicButton>
-              <Styled.CameraButton>
-                <CameraSVG />
-              </Styled.CameraButton>
-            </Styled.ControlContainer>
+            {!isModalOpen && (
+              <Styled.ControlContainer>
+                <Styled.HomeBackButton
+                  onClick={() => {
+                    window.location.reload();
+                    //setIsHome(true);
+                  }}
+                >
+                  <HomeBackSVG />
+                </Styled.HomeBackButton>
+                <Styled.MicButton
+                  className={isRecording ? 'pushed' : 'unpushed'}
+                  disabled={!isConnected}
+                  onTouchStart={startRecording}
+                  onTouchEnd={stopRecording}
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                >
+                  <MicSVG />
+                </Styled.MicButton>
+                <Styled.CameraButton
+                  onClick={() => {
+                    setShareable('capturing');
+                  }}
+                >
+                  <CameraSVG />
+                </Styled.CameraButton>
+              </Styled.ControlContainer>
+            )}
           </Styled.FilterContainer>
           <div className="content-debug" data-component="ConsolePage">
             <div className="content-top">
